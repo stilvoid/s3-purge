@@ -1,0 +1,29 @@
+#!/bin/bash
+
+BUCKET=$1
+
+if [ -z $BUCKET ]; then
+    echo "Usage: $0 <bucket name>"
+    echo "  Empties all objects and versions from the named bucket"
+    exit 1
+fi
+
+aws s3 rm --recursive s3://$BUCKET >/dev/null
+
+aws s3api delete-objects \
+    --bucket $BUCKET \
+    --delete "{\"Objects\": $(
+        aws s3api list-object-versions \
+            --bucket $BUCKET \
+            --query "Versions[*].{Key: Key, VersionId: VersionId}" \
+    )}" >/dev/null
+
+aws s3api delete-objects \
+    --bucket $BUCKET \
+    --delete "{\"Objects\": $(
+        aws s3api list-object-versions \
+            --bucket $BUCKET \
+            --query "DeleteMarkers[*].{Key: Key, VersionId: VersionId}" \
+    )}" >/dev/null
+
+echo Done.
