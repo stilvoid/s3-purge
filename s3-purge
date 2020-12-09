@@ -1,60 +1,60 @@
 #!/bin/bash
 
-#set -e
+set -eu -o pipefail
 
 BUCKET=$1
 
-if [ -z $BUCKET ]; then
+if [ -z "$BUCKET" ]; then
     echo "Usage: $0 <bucket name>"
     echo "  Empties all objects and versions from the named bucket"
     exit 1
 fi
 
-aws s3 rm --recursive s3://$BUCKET >/dev/null
+aws s3 rm --recursive "s3://$BUCKET" >/dev/null || true
 
 echo -n "Deleting objects: "
-((c=0))
+c=0
 while true; do
     versions=$(aws s3api list-object-versions \
-        --bucket $BUCKET \
+        --bucket "$BUCKET" \
         --query "Versions[*].{Key: Key, VersionId: VersionId}" \
         --max-items 100 \
     )
 
-    if [ "$versions" == "[]" -o "$versions" == "null" ]; then
+    if [ "$versions" == "[]" ] || [ "$versions" == "null" ]; then
         break
     fi
 
-    ((c=$c+$(echo "$versions" | jq 'length')))
+    ((c=c+$(echo "$versions" | jq 'length')))
     echo -n "${c}... "
 
     aws s3api delete-objects \
-        --bucket $BUCKET \
+        --bucket "$BUCKET" \
         --delete "{\"Objects\": ${versions}}" >/dev/null
 done
 echo
 
 echo -n "Removing delete markers: "
-((c=0))
+c=0
 while true; do
     markers=$(aws s3api list-object-versions \
-        --bucket $BUCKET \
+        --bucket "$BUCKET" \
         --query "DeleteMarkers[*].{Key: Key, VersionId: VersionId}" \
     )
 
-    if [ "$markers" == "[]" -o "$markers" == "null" ]; then
+    if [ "$markers" == "[]" ] || [ "$markers" == "null" ]; then
         break
     fi
 
     # We have to use jq to limit the list
     # because --max-items doesn't work for DeleteMarkers
-    markers=$(echo $markers | jq '.[:100]')
+    markers=$(echo "$markers" | jq '.[:100]')
 
-    ((c=$c+$(echo "$markers" | jq 'length')))
+    ((c=c+$(echo "$markers" | jq 'length')))
     echo -n "${c}... "
 
     aws s3api delete-objects \
-        --bucket $BUCKET \
+        --bucket "$BUCKET" \
         --delete "{\"Objects\": ${markers}}" >/dev/null
 done
 echo
