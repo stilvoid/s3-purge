@@ -1,6 +1,6 @@
 # s3-purge
 
-A simple script to remove all objects and version from an Amazon S3 bucket.
+A simple script to remove all objects and versions from an Amazon S3 bucket.
 
 ## Installation
 
