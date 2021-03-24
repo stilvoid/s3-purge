@@ -59,4 +59,9 @@ while true; do
 done
 echo
 
+read -r -p "Do you want to delete the bucket? [yN] " confirm
+if [[ "$confirm" =~ ^[Yy] ]]; then
+    aws s3 rb "s3://${BUCKET}"
+fi
+
 echo Done.
